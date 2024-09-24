@@ -780,29 +780,34 @@ local function grok_string(self, text, start, options)
 
    local i = start + 1 -- +1 to bypass the initial quote
    local text_len = text:len()
-   local VALUE = ""
+   local parts = {}  -- Using a table to store parts of the string to be joined later.
+   local append = function(s)
+       parts[#parts + 1] = s  -- Append the string to the parts table.
+   end
+
    while i <= text_len do
       local c = text:sub(i,i)
       if c == '"' then
-         return VALUE, i + 1
+          return table.concat(parts), i + 1  -- Using table.concat to join the parts table into a string.
       end
+
       if c ~= '\\' then
-         VALUE = VALUE .. c
+         append(c)
          i = i + 1
-      elseif text:match('^\\b', i) then
-         VALUE = VALUE .. "\b"
+      elseif text:sub(i, i + 1) == "\\b" then
+         append("\b")
          i = i + 2
-      elseif text:match('^\\f', i) then
-         VALUE = VALUE .. "\f"
+      elseif text:sub(i, i + 1) == "\\f" then
+         append("\f")
          i = i + 2
-      elseif text:match('^\\n', i) then
-         VALUE = VALUE .. "\n"
+      elseif text:sub(i, i + 1) == "\\n" then
+         append("\n")
          i = i + 2
-      elseif text:match('^\\r', i) then
-         VALUE = VALUE .. "\r"
+      elseif text:sub(i, i + 1) == "\\r" then
+         append("\r")
          i = i + 2
-      elseif text:match('^\\t', i) then
-         VALUE = VALUE .. "\t"
+      elseif text:sub(i, i + 1) == "\\t" then
+         append("\t")
          i = i + 2
       else
          local hex = text:match('^\\u([0123456789aAbBcCdDeEfF][0123456789aAbBcCdDeEfF][0123456789aAbBcCdDeEfF][0123456789aAbBcCdDeEfF])', i)
@@ -822,12 +827,9 @@ local function grok_string(self, text, start, options)
                   -- not a proper low, so we'll just leave the first codepoint as is and spit it out.
                end
             end
-            VALUE = VALUE .. unicode_codepoint_as_utf8(codepoint)
-
+            append(unicode_codepoint_as_utf8(codepoint))
          else
-
-            -- just pass through what's escaped
-            VALUE = VALUE .. text:match('^\\(.)', i)
+            append(text:match('^\\(.)', i))
             i = i + 2
          end
       end
